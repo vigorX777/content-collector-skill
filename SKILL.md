@@ -1,7 +1,7 @@
 ---
 name: content-collector
-description: "自动收集社交媒体内容（X/Twitter、即刻、公众号、Reddit 等）并整理成结构化笔记存入飞书文档。当用户发送链接或截图时使用此技能。"
-version: "1.3.0"
+description: "自动收集社交媒体内容（X/Twitter、即刻、公众号、Reddit 等）并整理成结构化笔记存入飞书多维表格。当用户发送链接或截图时使用此技能。"
+version: "1.4.0"
 ---
 
 # Content Collector - 社交内容收藏助手
@@ -125,64 +125,62 @@ Agent 根据 Step 1 的输出，调用对应 skill 提取内容。例如：
 
 提取到原始内容后，AI 整理为结构化信息：
 
-- 原文内容（完整保留）
-- AI 摘要（3-5 句话）
-- 作者/来源
-- 发布时间
-- 互动数据（点赞/转发/评论/浏览）
-- 关键词标签
-- 收藏理由
+- **标题**：内容标题
+- **来源**：作者/平台
+- **分类**：按内容类型分类
+- **摘要内容**：AI 生成的摘要，3-5 句话概括核心内容
+- **原文链接**：原始链接
+- **原文文件**：飞书云空间 .md 文件链接
 
-### Step 5: 格式化 & 存入飞书
+### Step 5: 存入多维表格（推荐）
+
+**优化后的流程**（v1.4.0）：
+
+```
+1. 抓取内容 → 保存为 .md 文件
+2. 上传到飞书云空间 → 获取文件链接
+3. LLM 只输出短字段（标题、来源、分类、摘要内容）
+4. 写入多维表格，原文通过文件链接跳转
+```
+
+**Agent 工作流**：
+1. 调用对应 skill 抓取内容
+2. 保存为本地 `.md` 文件（如 `/tmp/content_{id}.md`）
+3. 调用 `feishu_drive_file upload` 上传到云空间
+4. 获取文件链接（如 `https://my.feishu.cn/file/xxx`）
+5. 调用 `feishu_bitable_app_table_record` 写入多维表格
+
+**优势**：
+- ✅ 省钱：LLM 不输出长文本内容
+- ✅ 稳定：文件内容完整，不会截断
+- ✅ 可查看：飞书中直接打开 .md 文件
+- ✅ 可搜索：摘要内容+标题可搜索
+
+**字段结构**：
+
+| 字段 | 类型 | 用途 |
+|:---|:---|:---|
+| 标题 | 文本 | 可搜索 |
+| 来源 | 文本 | 可筛选 |
+| 分类 | 单选 | 可筛选 |
+| 原文链接 | 超链接 | 原始来源 |
+| 摘要内容 | 文本 | AI 生成的摘要，可搜索 |
+| 记录时间 | 创建时间 | 自动记录 |
+| 原文文件 | 超链接 | 飞书云空间 .md 文件 |
+
+**多维表格配置**：
+- App Token: `ND8ObCuSya5Dv3sREZYc03Ilngh`
+- Table ID: `tblaHDM5kjtikIl9`
+
+### Step 5 (备用): 格式化为 Markdown 文档
+
+如果需要存入普通飞书文档（非多维表格），使用：
 
 ```bash
 python3 scripts/append_to_feishu.py '<json_content>'
 ```
 
-输入 JSON 格式：
-```json
-{
-  "platform": "X/Twitter",
-  "author": "作者名",
-  "title": "标题",
-  "content": "原文内容...",
-  "url": "https://...",
-  "created_at": "2026-03-14T10:00:00",
-  "summary": "AI 摘要",
-  "keywords": ["关键词1", "关键词2"],
-  "reason": "收藏理由",
-  "stats": {"likes": 100, "retweets": 50, "bookmarks": 30, "views": 10000}
-}
-```
-
 输出为格式化的 Markdown，供 Agent 调用 feishu-doc 的 append 操作写入文档。
-
-**文档格式**：
-
-```markdown
-### {序号}. {标题}
-
-| 属性 | 内容 |
-|:---|:---|
-| **作者** | {作者} |
-| **平台** | {平台} |
-| **发布时间** | {时间} |
-| **原文链接** | [查看原帖]({url}) |
-| **互动数据** | 👍 {likes} | 🔄 {retweets} | 💾 {bookmarks} | 👁️ {views} |
-
-**原文内容**：
-> {原文内容}
-
-**AI 摘要**：
-{摘要}
-
-**关键词**：{关键词}
-
-**为什么收藏**：
-{收藏理由}
-
----
-```
 
 ### Step 6: 图片 OCR（可选）
 
@@ -202,8 +200,10 @@ python3 scripts/ocr_image.py /path/to/image.png
 |:---|:---|:---|
 | `scripts/extract_content.py` | 平台检测 + skill 路由 | ✅ 独立运行 |
 | `scripts/deduplicate.py` | URL 去重（本地缓存 + 文档匹配） | ✅ 独立运行 |
-| `scripts/append_to_feishu.py` | 内容格式化为飞书 Markdown | ✅ 独立运行 |
+| `scripts/append_to_feishu.py` | 内容格式化为飞书 Markdown（备用） | ✅ 独立运行 |
 | `scripts/ocr_image.py` | 图片 OCR（需 pytesseract 或外部服务） | ⚠️ 需可选依赖 |
+
+> **注意**：v1.4.0 后不再需要 `save_to_bitable.py`，改用飞书云空间上传方案。
 
 ## 去重机制
 
@@ -236,6 +236,12 @@ python3 scripts/ocr_image.py /path/to/image.png
 每天 18:00 推送当日收藏数量、标题列表和文档链接。
 
 ## 更新日志
+
+### v1.4.0 (2026-03-18)
+- 🎉 **长文本优化**：原文上传到飞书云空间，用 URL 字段存储链接
+- ✅ 新增"原文文件"字段，"原文内容"改名为"摘要内容"
+- ✅ LLM 不再输出长文本，大幅节省 token
+- ✅ 原文通过飞书文件链接跳转查看，支持 .md 格式
 
 ### v1.3.0 (2026-03-17)
 - 🎉 **微信公众号抓取能力升级**：改用 Scrapling 方案，完美绕过微信反爬
