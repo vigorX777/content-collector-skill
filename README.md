@@ -90,6 +90,7 @@ export FEISHU_BITABLE_TABLE_ID="your_table_id"
 content-collector/
 ├── SKILL.md              # 主文件
 ├── README.md             # 说明文档
+├── OPTIMIZATION.md       # 版本记录与待办
 ├── assets/               # 图片资源
 ├── scripts/              # 辅助脚本
 │   ├── extract_content.py    # 平台检测
@@ -99,6 +100,19 @@ content-collector/
     ├── platforms.md          # 平台映射
     └── feishu_config.md      # 飞书配置
 ```
+
+## 版本记录
+
+详见 [OPTIMIZATION.md](./OPTIMIZATION.md)
+
+| 版本 | 日期 | 主要变更 |
+|------|------|---------|
+| v1.5.0 | 2026-03-19 | 基于 skill-creator 最佳实践重构 |
+| v1.4.0 | 2026-03-18 | 长文本优化，原文上传云空间 |
+| v1.3.0 | 2026-03-17 | 微信公众号 Scrapling 方案 |
+| v1.2.0 | 2026-03-14 | 架构重构，移除硬编码路径 |
+| v1.1.0 | 2026-03-14 | 去重机制 |
+| v1.0.0 | 2026-03-14 | 初始版本 |
 
 ---
 
