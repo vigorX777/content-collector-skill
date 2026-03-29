@@ -261,6 +261,11 @@ feishu_bitable_app_table_record(
 
 **Important**: Always save BOTH `原文链接` (original URL) and `原文文件` (Feishu Drive backup). This ensures content remains accessible even if the original link becomes unavailable.
 
+**Changelog v2.1 (2026-03-29)**:
+- ✅ **Fixed**: 上传失败时不再写入虚假 URL，确保 `原文文件` 字段只有真实存在的文件
+- ✅ **Added**: 上传状态验证，失败时记录错误日志但不写入占位符
+- ✅ **Improved**: 更严格的字段写入条件，防止测试数据/虚假链接进入表格
+
 **Changelog v2.0 (2026-03-29)**:
 - ✅ **Fixed**: `save_to_bitable.py` now uploads files to Feishu Drive before creating records
 - ✅ **Added**: `upload_file_to_feishu()` function handles file upload with proper multipart/form-data

@@ -184,14 +184,19 @@ def save_to_bitable(
     
     # 上传文件到云空间（如果提供了文件路径）
     file_url = None
+    upload_success = False
     if content_file and os.path.exists(content_file):
         try:
             upload_result = upload_file_to_feishu(content_file, token)
             file_token = upload_result.get("file_token")
             if file_token:
                 file_url = f"https://my.feishu.cn/file/{file_token}"
+                upload_success = True
+                print(f"✅ 文件上传成功: {file_url}", file=sys.stderr)
+            else:
+                print(f"⚠️ 文件上传返回空token", file=sys.stderr)
         except Exception as e:
-            print(f"⚠️ 文件上传失败: {e}", file=sys.stderr)
+            print(f"❌ 文件上传失败: {e}", file=sys.stderr)
     
     # 构建记录字段
     fields = {
@@ -202,9 +207,11 @@ def save_to_bitable(
         "摘要内容": content[:2000] if len(content) > 2000 else content,  # 摘要限制长度
     }
     
-    # 如果有文件URL，添加到原文文件字段
-    if file_url:
+    # 只有文件上传成功时，才添加原文文件字段
+    if upload_success and file_url:
         fields["原文文件"] = {"text": "查看完整内容", "link": file_url}
+    else:
+        print(f"⚠️ 原文文件字段未写入（上传失败或未提供文件）", file=sys.stderr)
     
     # 调用 API 创建记录
     path = f"/bitable/v1/apps/{app_token}/tables/{table_id}/records"
