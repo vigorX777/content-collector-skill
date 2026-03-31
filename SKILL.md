@@ -230,36 +230,52 @@ feishu_bitable_app_table_record(
 - `原文文件` - 飞书云空间文件链接（URL类型）
 - `标签` - 5个标签数组
 
-**Complete flow (v2.0)**:
+**Complete flow (v2.2 - 强制脚本方案)**:
+
+> ⚠️ **重要**: 必须通过 `save_to_bitable.py` 脚本写入，禁止直接调用 `feishu_bitable_app_table_record`
 
 1. **Extract content** using platform-specific skill (x-tweet-fetcher, web-content-fetcher, etc.)
 2. **Generate summary** - AI summarize the content
 3. **Generate tags** - 5 tags (对象2 + 场景1 + 类型1 + 方法1)
-4. **Save as local `.md` file** - Full content preserved
-5. **Upload to Feishu Drive** - Get file URL for `原文文件`
-6. **Write to bitable** with both URLs:
-   ```python
-   feishu_bitable_app_table_record(
-     action="create",
-     app_token="...",
-     table_id="...",
-     fields={
-       "标题": "文章标题",
-       "来源": "X/Twitter",
-       "分类": "🛠️实战案例",
-       "摘要内容": "AI生成的摘要...",
-       "原文链接": {"text": "查看原文", "link": "https://x.com/i/status/..."},
-       "原文文件": {"text": "查看完整内容", "link": "https://my.feishu.cn/file/..."},
-       "标签": ["tag1", "tag2", "tag3", "tag4", "tag5"]
-     }
-   )
+4. **Save as local `.md` file** - Full content preserved to `/tmp/content.md`
+5. **强制使用脚本写入** - 禁止直接调用工具:
+   ```bash
+   python3 scripts/save_to_bitable.py \
+       --title "文章标题" \
+       --source "X/Twitter" \
+       --category "🛠️实战案例" \
+       --url "https://x.com/i/status/..." \
+       --content-file /tmp/content.md
    ```
-7. **Update dedupe cache**
+   
+   **脚本会自动完成**:
+   - 上传文件到飞书云空间
+   - 获取真实 file_token
+   - 写入「原文文件」字段（只有上传成功时才写入）
+   - 写入「原文链接」字段
+   - 返回记录 ID
+
+6. **Update dedupe cache**
    ```bash
    python3 scripts/deduplicate.py --add "<url>"
    ```
 
+**🚫 禁止行为**:
+- 禁止直接调用 `feishu_bitable_app_table_record` 写入「原文文件」
+- 禁止使用占位符 URL (`http://查看完整内容`, `http://推文链接` 等)
+- 禁止在未上传文件时假设文件链接
+
+**✅ 强制检查**:
+- 脚本会验证文件上传状态
+- 只有 `upload_success=True` 时才写入「原文文件」
+- 上传失败会报错，不会写入虚假数据
+
 **Important**: Always save BOTH `原文链接` (original URL) and `原文文件` (Feishu Drive backup). This ensures content remains accessible even if the original link becomes unavailable.
+
+**Changelog v2.2 (2026-03-31)**:
+- ✅ **强制脚本方案**: 必须通过 `save_to_bitable.py` 写入，禁止直接调用 `feishu_bitable_app_table_record`
+- ✅ **URL 格式校验**: 自动拦截 `http://查看完整内容` 等占位符
+- ✅ **上传验证**: 只有真实上传成功时才写入「原文文件」
 
 **Changelog v2.1 (2026-03-29)**:
 - ✅ **Fixed**: 上传失败时不再写入虚假 URL，确保 `原文文件` 字段只有真实存在的文件
